@@ -8,7 +8,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: فك المشروع
-        run: unzip -o project.zip -d src
+        run: |
+          Z=$(ls *.zip | head -1)
+          echo "ملف المشروع: $Z"
+          unzip -o "$Z" -d src
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
