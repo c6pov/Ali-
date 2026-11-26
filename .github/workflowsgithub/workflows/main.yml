@@ -1,0 +1,35 @@
+name: Build APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: فك المشروع
+        run: unzip -o project.zip -d src
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+      - name: بناء
+        working-directory: src
+        run: gradle assembleRelease --no-daemon
+      - name: توقيع بمفتاح AOSP platform
+        run: |
+          base=https://android.googlesource.com/platform/build/+/refs/heads/main/target/product/security
+          curl -sL "$base/platform.pk8?format=TEXT" | base64 -d > platform.pk8
+          curl -sL "$base/platform.x509.pem?format=TEXT" | base64 -d > platform.x509.pem
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          IN=src/app/build/outputs/apk/release/app-release-unsigned.apk
+          $BT/zipalign -f 4 $IN aligned.apk
+          $BT/apksigner sign --key platform.pk8 --cert platform.x509.pem --out SawtiyaSync.apk aligned.apk
+          $BT/apksigner verify --print-certs SawtiyaSync.apk | head -3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SawtiyaSync-apk
+          path: SawtiyaSync.apk
